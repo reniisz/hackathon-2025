@@ -74,14 +74,37 @@ class AuthController extends BaseController
 
     public function login(Request $request, Response $response): Response
     {
-        // TODO: call corresponding service to perform user login, handle login failures
+        $data = (array) $request->getParsedBody();
+        $username = trim($data['username'] ?? '');
+        $password = $data['password'] ?? '';
+        $errors = [];
 
+        if (!$this->authService->attempt($username, $password)) {
+            $this->logger->warning("Login failed for $username");
+
+            return $this->render($response, 'auth/login.twig', [
+                'username' => $username,
+                'errors' => ['login' => 'Invalid username or password'],
+            ]);
+        }
+
+        $this->logger->info("User logged in: $username");
         return $response->withHeader('Location', '/')->withStatus(302);
     }
 
     public function logout(Request $request, Response $response): Response
     {
         // TODO: handle logout by clearing session data and destroying session
+        // clear session data
+        if (session_status() !== PHP_SESSION_ACTIVE) {
+            session_start();
+        }
+
+        $_SESSION = [];
+        session_destroy();
+        session_start();
+
+        $this->logger->info('User logged out');
 
         return $response->withHeader('Location', '/login')->withStatus(302);
     }
