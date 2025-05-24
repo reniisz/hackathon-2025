@@ -72,7 +72,6 @@ class ExpenseController extends BaseController
         }
 
         $user = $this->authService->getById($userId);
-
         $data = (array)$request->getParsedBody();
         $errors = [];
 
@@ -83,10 +82,10 @@ class ExpenseController extends BaseController
         $description = trim($data['description'] ?? '');
 
         // Validate date
+        $date = null;
         try {
             $date = new \DateTimeImmutable($dateStr);
-            $now = new \DateTimeImmutable();
-            if ($date > $now) {
+            if ($date > new \DateTimeImmutable()) {
                 $errors['date'] = 'Date must not be in the future.';
             }
         } catch (\Exception) {
@@ -117,6 +116,7 @@ class ExpenseController extends BaseController
             ]);
         }
 
+        // creates only if validation passed
         $this->expenseService->create($user, (float)$amountStr, $description, $date, $category);
 
         return $response->withHeader('Location', '/expenses')->withStatus(302);
@@ -143,6 +143,34 @@ class ExpenseController extends BaseController
         ]);
     }
 
+    private function validateExpenseData(array $data): array
+    {
+        $errors = [];
+
+        try {
+            $date = new \DateTimeImmutable(trim($data['date'] ?? ''));
+            if ($date > new \DateTimeImmutable()) {
+                $errors['date'] = 'Date must not be in the future.';
+            }
+        } catch (\Exception) {
+            $errors['date'] = 'Invalid date format.';
+        }
+
+        if (empty($data['category'])) {
+            $errors['category'] = 'Category is required.';
+        }
+
+        if (!is_numeric($data['amount']) || (float)$data['amount'] <= 0) {
+            $errors['amount'] = 'Amount must be a number greater than 0.';
+        }
+
+        if (empty(trim($data['description'] ?? ''))) {
+            $errors['description'] = 'Description is required.';
+        }
+
+        return $errors;
+    }
+
     public function update(Request $request, Response $response, array $routeParams): Response
     {
         $userId = $_SESSION['user_id'] ?? null;
@@ -153,47 +181,13 @@ class ExpenseController extends BaseController
         $expenseId = (int)($routeParams['id'] ?? 0);
         $expense = $this->expenseService->find($expenseId);
 
-        // Ownership check
         if (!$expense || $expense->userId !== $userId) {
             return $response->withStatus(403);
         }
 
         $data = (array)$request->getParsedBody();
-        $errors = [];
+        $errors = $this->validateExpenseData($data);
 
-        // Extract values
-        $dateStr = trim($data['date'] ?? '');
-        $category = trim($data['category'] ?? '');
-        $amountStr = trim($data['amount'] ?? '');
-        $description = trim($data['description'] ?? '');
-
-        // Validate date
-        try {
-            $date = new \DateTimeImmutable($dateStr);
-            $now = new \DateTimeImmutable();
-            if ($date > $now) {
-                $errors['date'] = 'Date must not be in the future.';
-            }
-        } catch (\Exception) {
-            $errors['date'] = 'Invalid date format.';
-        }
-
-        // Validate category
-        if ($category === '') {
-            $errors['category'] = 'Category is required.';
-        }
-
-        // Validate amount
-        if (!is_numeric($amountStr) || (float)$amountStr <= 0) {
-            $errors['amount'] = 'Amount must be a number greater than 0.';
-        }
-
-        // Validate description
-        if ($description === '') {
-            $errors['description'] = 'Description is required.';
-        }
-
-        // On error → rerender form with values
         if (!empty($errors)) {
             return $this->render($response, 'expenses/edit.twig', [
                 'errors' => $errors,
@@ -203,10 +197,9 @@ class ExpenseController extends BaseController
             ]);
         }
 
-        // Update entity
-        $this->expenseService->update($expense, (float)$amountStr, $description, $date, $category);
+        $date = new \DateTimeImmutable($data['date']);
+        $this->expenseService->update($expense, (float)$data['amount'], trim($data['description']), $date, trim($data['category']));
 
-        // Redirect to list
         return $response->withHeader('Location', '/expenses')->withStatus(302);
     }
 
