@@ -52,7 +52,19 @@ class AuthController extends BaseController
             ]);
         }
 
-        return $response->withHeader('Location', '/login')->withStatus(302);
+        try {
+            $this->authService->register($username, $password);
+            $this->logger->info("User registered: $username");
+
+            return $response->withHeader('Location', '/login')->withStatus(302);
+        } catch (\Throwable $e) {
+            $this->logger->error("Registration failed for $username: " . $e->getMessage());
+
+            return $this->render($response, 'auth/register.twig', [
+                'username' => $username,
+                'errors' => ['username' => 'Registration failed. Username might already exist.'],
+            ]);
+        }
     }
 
     public function showLogin(Request $request, Response $response): Response

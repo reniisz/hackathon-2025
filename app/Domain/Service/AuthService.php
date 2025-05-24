@@ -15,11 +15,17 @@ class AuthService
 
     public function register(string $username, string $password): User
     {
-        // TODO: check that a user with same username does not exist, create new user and persist
-        // TODO: make sure password is not stored in plain, and proper PHP functions are used for that
+        // check that a user with same username does not exist, create new user and persist
 
-        // TODO: here is a sample code to start with
-        $user = new User(null, $username, $password, new \DateTimeImmutable());
+        if ($this->users->findByUsername($username)) {
+            throw new \RuntimeException('Username already exists.');
+        }
+
+        // TODO: make sure password is not stored in plain, and proper PHP functions are used for that
+        // hashed pswd
+        $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+
+        $user = new User(null, $username, $hashedPassword, new \DateTimeImmutable());
         $this->users->save($user);
 
         return $user;
