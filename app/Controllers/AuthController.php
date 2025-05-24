@@ -31,6 +31,26 @@ class AuthController extends BaseController
     public function register(Request $request, Response $response): Response
     {
         // TODO: call corresponding service to perform user registration
+        $data = (array) $request->getParsedBody();
+        $username = trim($data['username'] ?? '');
+        $password = $data['password'] ?? '';
+        $errors = [];
+
+        // Validation
+        if (strlen($username) < 4) {
+            $errors['username'] = 'Username must be at least 4 characters long.';
+        }
+
+        if (strlen($password) < 8 || !preg_match('/\d/', $password)) {
+            $errors['password'] = 'Password must be at least 8 characters and contain at least one number.';
+        }
+
+        if (!empty($errors)) {
+            return $this->render($response, 'auth/register.twig', [
+                'username' => $username,
+                'errors' => $errors,
+            ]);
+        }
 
         return $response->withHeader('Location', '/login')->withStatus(302);
     }
