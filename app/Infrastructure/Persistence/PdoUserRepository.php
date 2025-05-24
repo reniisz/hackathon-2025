@@ -19,21 +19,22 @@ class PdoUserRepository implements UserRepositoryInterface
     /**
      * @throws Exception
      */
-    public function find(mixed $id): ?User
+    public function findById(int $id): ?User
     {
         $query = 'SELECT * FROM users WHERE id = :id';
-        $statement = $this->pdo->prepare($query);
-        $statement->execute(['id' => $id]);
-        $data = $statement->fetch();
+        $stmt = $this->pdo->prepare($query);
+        $stmt->execute(['id' => $id]);
+        $data = $stmt->fetch();
+
         if (false === $data) {
             return null;
         }
 
         return new User(
-            $data['id'],
+            (int)$data['id'],
             $data['username'],
             $data['password_hash'],
-            new DateTimeImmutable($data['created_at']),
+            new DateTimeImmutable($data['created_at'])
         );
     }
 
@@ -48,10 +49,10 @@ class PdoUserRepository implements UserRepositoryInterface
         }
 
         return new User(
-            $data['id'],
+            (int)$data['id'],
             $data['username'],
             $data['password_hash'],
-            new DateTimeImmutable($data['created_at']),
+            new DateTimeImmutable($data['created_at'])
         );
     }
 
@@ -59,7 +60,7 @@ class PdoUserRepository implements UserRepositoryInterface
     {
         $stmt = $this->pdo->prepare(
             'INSERT INTO users (username, password_hash, created_at)
-            VALUES (:username, :password_hash, :created_at)'
+             VALUES (:username, :password_hash, :created_at)'
         );
 
         $stmt->execute([
@@ -67,5 +68,7 @@ class PdoUserRepository implements UserRepositoryInterface
             'password_hash' => $user->passwordHash,
             'created_at'    => $user->createdAt->format('Y-m-d H:i:s'),
         ]);
+
+        $user->id = (int)$this->pdo->lastInsertId();
     }
 }

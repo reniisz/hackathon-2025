@@ -46,4 +46,14 @@ class AuthService
 
         return true;
     }
+
+    public function getByUsername(string $username): ?User
+    {
+        return $this->users->findByUsername($username);
+    }
+
+    public function getById(int $id): ?User
+    {
+        return $this->users->findById($id);
+    }
 }

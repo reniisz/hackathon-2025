@@ -15,8 +15,29 @@ abstract class BaseController
 
     protected function render(Response $response, string $template, array $data = []): Response
     {
+        if (session_status() !== PHP_SESSION_ACTIVE) {
+            session_start();
+        }
+
+        if (empty($_SESSION['csrf_token'])) {
+            $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+        }
+
+        $data['csrf_token'] = $_SESSION['csrf_token'];
+        $data['currentUserId'] = $_SESSION['user_id'] ?? null;
+        $data['currentUserName'] = $_SESSION['username'] ?? 'User';
+
         return $this->view->render($response, $template, $data);
     }
 
-    // TODO: add here any common controller logic and use in concrete controllers
+    protected function ensureCsrfToken(): void
+    {
+        if (session_status() !== PHP_SESSION_ACTIVE) {
+            session_start();
+        }
+
+        if (empty($_SESSION['csrf_token'])) {
+            $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+        }
+    }
 }

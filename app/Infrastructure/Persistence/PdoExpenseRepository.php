@@ -35,13 +35,82 @@ class PdoExpenseRepository implements ExpenseRepositoryInterface
 
     public function save(Expense $expense): void
     {
-        // TODO: Implement save() method.
+        if ($expense->id === null) {
+            // Insert
+            $stmt = $this->pdo->prepare(
+                'INSERT INTO expenses (user_id, date, category, amount_cents, description)
+                 VALUES (:user_id, :date, :category, :amount_cents, :description)'
+            );
+            $stmt->execute([
+                ':user_id' => $expense->userId,
+                ':date' => $expense->date->format('Y-m-d'),
+                ':category' => $expense->category,
+                ':amount_cents' => $expense->amountCents,
+                ':description' => $expense->description,
+            ]);
+        } else {
+            // Update
+            $stmt = $this->pdo->prepare(
+                'UPDATE expenses
+                 SET date = :date, category = :category, amount_cents = :amount_cents, description = :description
+                 WHERE id = :id AND user_id = :user_id'
+            );
+            $stmt->execute([
+                ':id' => $expense->id,
+                ':user_id' => $expense->userId,
+                ':date' => $expense->date->format('Y-m-d'),
+                ':category' => $expense->category,
+                ':amount_cents' => $expense->amountCents,
+                ':description' => $expense->description,
+            ]);
+        }
     }
 
     public function delete(int $id): void
     {
         $statement = $this->pdo->prepare('DELETE FROM expenses WHERE id=?');
         $statement->execute([$id]);
+    }
+
+    /**
+    * @throws Exception
+    */
+    public function listByMonth(int $userId, int $year, int $month, int $limit, int $offset): array
+    {
+        $datePrefix = sprintf('%04d-%02d', $year, $month);
+
+        $query = 'SELECT * FROM expenses
+                  WHERE user_id = :user_id
+                  AND strftime(\'%Y-%m\', date) = :date_prefix
+                  ORDER BY date DESC
+                  LIMIT :limit OFFSET :offset';
+
+        $statement = $this->pdo->prepare($query);
+        $statement->bindValue(':user_id', $userId, PDO::PARAM_INT);
+        $statement->bindValue(':date_prefix', $datePrefix, PDO::PARAM_STR);
+        $statement->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $statement->bindValue(':offset', $offset, PDO::PARAM_INT);
+        $statement->execute();
+
+        $rows = $statement->fetchAll();
+        return array_map([$this, 'createExpenseFromData'], $rows);
+    }
+
+    public function countByMonth(int $userId, int $year, int $month): int
+    {
+        $datePrefix = sprintf('%04d-%02d', $year, $month);
+
+        $query = 'SELECT COUNT(*) FROM expenses
+                  WHERE user_id = :user_id
+                  AND strftime(\'%Y-%m\', date) = :date_prefix';
+
+        $statement = $this->pdo->prepare($query);
+        $statement->execute([
+            ':user_id' => $userId,
+            ':date_prefix' => $datePrefix,
+        ]);
+
+        return (int)$statement->fetchColumn();
     }
 
     public function findBy(array $criteria, int $from, int $limit): array
@@ -59,26 +128,60 @@ class PdoExpenseRepository implements ExpenseRepositoryInterface
 
     public function listExpenditureYears(User $user): array
     {
-        // TODO: Implement listExpenditureYears() method.
-        return [];
+        $query = 'SELECT DISTINCT strftime(\'%Y\', date) as year FROM expenses WHERE user_id = :uid ORDER BY year DESC';
+        $stmt = $this->pdo->prepare($query);
+        $stmt->execute([':uid' => $user->id]);
+        $years = $stmt->fetchAll(\PDO::FETCH_COLUMN);
+
+        $currentYear = (new \DateTimeImmutable())->format('Y');
+        if (!in_array($currentYear, $years)) {
+            array_unshift($years, $currentYear); // ensure current year is present
+        }
+
+        return $years;
     }
 
     public function sumAmountsByCategory(array $criteria): array
     {
-        // TODO: Implement sumAmountsByCategory() method.
-        return [];
+        $query = 'SELECT category, SUM(amount_cents) as total
+                  FROM expenses
+                  WHERE user_id = :user_id AND strftime(\'%Y-%m\', date) = :date_prefix
+                  GROUP BY category';
+        $stmt = $this->pdo->prepare($query);
+        $stmt->execute([
+            ':user_id' => $criteria['user_id'],
+            ':date_prefix' => sprintf('%04d-%02d', $criteria['year'], $criteria['month']),
+        ]);
+
+        return $stmt->fetchAll(PDO::FETCH_KEY_PAIR); // category => total
     }
 
     public function averageAmountsByCategory(array $criteria): array
     {
-        // TODO: Implement averageAmountsByCategory() method.
-        return [];
+        $query = 'SELECT category, AVG(amount_cents) as average
+                  FROM expenses
+                  WHERE user_id = :user_id AND strftime(\'%Y-%m\', date) = :date_prefix
+                  GROUP BY category';
+        $stmt = $this->pdo->prepare($query);
+        $stmt->execute([
+            ':user_id' => $criteria['user_id'],
+            ':date_prefix' => sprintf('%04d-%02d', $criteria['year'], $criteria['month']),
+        ]);
+
+        return $stmt->fetchAll(PDO::FETCH_KEY_PAIR); // category => average
     }
 
     public function sumAmounts(array $criteria): float
     {
-        // TODO: Implement sumAmounts() method.
-        return 0;
+        $query = 'SELECT SUM(amount_cents) FROM expenses
+                  WHERE user_id = :user_id AND strftime(\'%Y-%m\', date) = :date_prefix';
+        $stmt = $this->pdo->prepare($query);
+        $stmt->execute([
+            ':user_id' => $criteria['user_id'],
+            ':date_prefix' => sprintf('%04d-%02d', $criteria['year'], $criteria['month']),
+        ]);
+
+        return (float)$stmt->fetchColumn();
     }
 
     /**

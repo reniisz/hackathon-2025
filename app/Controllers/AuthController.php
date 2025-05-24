@@ -23,15 +23,28 @@ class AuthController extends BaseController
     public function showRegister(Request $request, Response $response): Response
     {
         // TODO: you also have a logger service that you can inject and use anywhere; file is var/app.log
+        $this->ensureCsrfToken();
         $this->logger->info('Register page requested');
 
-        return $this->render($response, 'auth/register.twig');
+        return $this->render($response, 'auth/register.twig', [
+            'csrf_token' => $_SESSION['csrf_token'],
+        ]);
     }
 
     public function register(Request $request, Response $response): Response
     {
         // TODO: call corresponding service to perform user registration
         $data = (array) $request->getParsedBody();
+
+        // CSRF validation - bonus
+        if (!isset($_SESSION['csrf_token']) || $data['csrf_token'] !== $_SESSION['csrf_token']) {
+            return $this->render($response, 'auth/register.twig', [
+                'errors' => ['csrf' => 'Invalid CSRF token'],
+                'username' => $data['username'] ?? '',
+                'csrf_token' => $_SESSION['csrf_token'],
+            ]);
+        }
+
         $username = trim($data['username'] ?? '');
         $password = $data['password'] ?? '';
         $errors = [];
@@ -49,6 +62,7 @@ class AuthController extends BaseController
             return $this->render($response, 'auth/register.twig', [
                 'username' => $username,
                 'errors' => $errors,
+                'csrf_token' => $_SESSION['csrf_token'],
             ]);
         }
 
@@ -63,18 +77,32 @@ class AuthController extends BaseController
             return $this->render($response, 'auth/register.twig', [
                 'username' => $username,
                 'errors' => ['username' => 'Registration failed. Username might already exist.'],
+                'csrf_token' => $_SESSION['csrf_token'],
             ]);
         }
     }
 
     public function showLogin(Request $request, Response $response): Response
     {
-        return $this->render($response, 'auth/login.twig');
+        $this->ensureCsrfToken();
+
+        return $this->render($response, 'auth/login.twig', [
+            'csrf_token' => $_SESSION['csrf_token'],
+        ]);
     }
 
     public function login(Request $request, Response $response): Response
     {
         $data = (array) $request->getParsedBody();
+
+        if (!isset($_SESSION['csrf_token']) || $data['csrf_token'] !== $_SESSION['csrf_token']) {
+            return $this->render($response, 'auth/login.twig', [
+                'errors' => ['csrf' => 'Invalid CSRF token'],
+                'username' => $data['username'] ?? '',
+                'csrf_token' => $_SESSION['csrf_token'],
+            ]);
+        }
+
         $username = trim($data['username'] ?? '');
         $password = $data['password'] ?? '';
         $errors = [];
@@ -85,8 +113,12 @@ class AuthController extends BaseController
             return $this->render($response, 'auth/login.twig', [
                 'username' => $username,
                 'errors' => ['login' => 'Invalid username or password'],
+                'csrf_token' => $_SESSION['csrf_token'],
             ]);
         }
+
+        $user = $this->authService->getByUsername($username);
+        $_SESSION['user_id'] = $user->getId();
 
         $this->logger->info("User logged in: $username");
         return $response->withHeader('Location', '/')->withStatus(302);

@@ -12,6 +12,16 @@ final class User
         public ?int $id,
         public string $username,
         public string $passwordHash,
-        public DateTimeImmutable $createdAt,
+        public \DateTimeImmutable $createdAt,
     ) {}
+
+    public function getId(): ?int
+    {
+        return $this->id;
+    }
+
+    public function getUsername(): string
+    {
+        return $this->username;
+    }
 }
