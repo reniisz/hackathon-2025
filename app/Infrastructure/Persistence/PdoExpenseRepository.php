@@ -201,11 +201,17 @@ class PdoExpenseRepository implements ExpenseRepositoryInterface
             ':date_prefix' => sprintf('%04d-%02d', $criteria['year'], $criteria['month']),
         ]);
 
-        $result = [];
-        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
-            $result[$row['category']] = (float) $row['average'];
-        }
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $total = array_sum(array_column($rows, 'average'));
 
+        $result = [];
+        foreach ($rows as $row) {
+            $raw = (float)$row['average'];
+            $result[$row['category']] = [
+                'value' => (int) round($raw), // still in cents
+                'percentage' => $total > 0 ? round(($raw / $total) * 100, 2) : 0,
+            ];
+        }
         return $result;
     }
 
