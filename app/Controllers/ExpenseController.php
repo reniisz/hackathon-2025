@@ -116,8 +116,8 @@ class ExpenseController extends BaseController
             ]);
         }
 
-        $amountCents = (int) round(((float)$amountStr) * 100);
-        $this->expenseService->create($user, $amountCents, $description, $date, $category);
+        $amount = (float) $amountStr;
+        $this->expenseService->create($user, $amount, $description, $date, $category);
 
         return $response->withHeader('Location', '/expenses')->withStatus(302);
     }
@@ -237,6 +237,25 @@ class ExpenseController extends BaseController
         return $response
             ->withHeader('Location', '/expenses')
             ->withStatus(302);
+    }
+
+    public function import(Request $request, Response $response): Response
+    {
+        $userId = $_SESSION['user_id'] ?? null;
+        if (!$userId) {
+            return $response->withHeader('Location', '/login')->withStatus(302);
+        }
+
+        $user = $this->authService->getById($userId);
+        $uploadedFile = $request->getUploadedFiles()['csv_file'] ?? null;
+
+        if ($uploadedFile === null || $uploadedFile->getError() !== UPLOAD_ERR_OK) {
+            return $response->withHeader('Location', '/expenses')->withStatus(302);
+        }
+
+        $this->expenseService->importFromCsv($user, $uploadedFile);
+
+        return $response->withHeader('Location', '/expenses')->withStatus(302);
     }
 
     private function getCategories(): array

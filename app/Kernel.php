@@ -15,10 +15,13 @@ use Monolog\Level;
 use Monolog\Logger;
 use PDO;
 use Psr\Log\LoggerInterface;
+use Psr\Http\Message\ResponseFactoryInterface;
 use Slim\App;
 use Slim\Factory\AppFactory;
 use Slim\Views\Twig;
 use Slim\Views\TwigMiddleware;
+use Slim\Csrf\Guard;
+use Slim\Middleware\MethodOverrideMiddleware;
 
 use function DI\autowire;
 use function DI\factory;
@@ -31,58 +34,62 @@ class Kernel
             session_start();
         }
 
-        // Configure the DI container builder and build the DI container
         $builder = new ContainerBuilder();
-        $builder->useAutowiring(true);  // Enable autowiring explicitly
+        $builder->useAutowiring(true);
 
         $builder->addDefinitions([
-            // Define a factory for the Monolog logger with a stream handler that writes to var/app.log
             LoggerInterface::class => function () {
                 $logger = new Logger('app');
-                $logger->pushHandler(new StreamHandler(__DIR__.'/../var/app.log', Level::Debug));
-
+                $logger->pushHandler(new StreamHandler(__DIR__ . '/../var/app.log', Level::Debug));
                 return $logger;
             },
 
-            // Define a factory for Twig view renderer
             Twig::class => function () {
-                return Twig::create(__DIR__.'/../templates', ['cache' => false]);
+                return Twig::create(__DIR__ . '/../templates', ['cache' => false]);
             },
 
-            // Define a factory for PDO database connection
             PDO::class => factory(function () {
                 static $pdo = null;
                 if ($pdo === null) {
                     $pdo = new PDO('sqlite:' . __DIR__ . '/../' . $_ENV['DB_PATH']);
-                    //$pdo = new PDO('sqlite:'.$_ENV['DB_PATH']);
                     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
                     $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
                 }
-
                 return $pdo;
             }),
 
-            // Map interfaces to concrete implementations
-            UserRepositoryInterface::class    => autowire(PdoUserRepository::class),
+            UserRepositoryInterface::class => autowire(PdoUserRepository::class),
             ExpenseRepositoryInterface::class => autowire(PdoExpenseRepository::class),
             CategoryBudgetProvider::class => factory(function () {
                 return new CategoryBudgetProvider($_ENV['CATEGORY_BUDGETS'] ?? '{}');
             }),
+
+            ResponseFactoryInterface::class => function () {
+                return AppFactory::create()->getResponseFactory();
+            },
+
+            Guard::class => function ($c) {
+                return new Guard($c->get(ResponseFactoryInterface::class));
+            },
         ]);
+
         $container = $builder->build();
 
-        // Create an application instance and configure
         AppFactory::setContainer($container);
         $app = AppFactory::create();
-        $app->add(TwigMiddleware::createFromContainer($app, Twig::class));
-        (require __DIR__.'/../config/settings.php')($app);
-        (require __DIR__.'/../config/routes.php')($app);
 
-        // Make current user ID globally available to twig templates
-        // TODO: change the following line to set the user ID stored in the session, for when user is logged
-        $loggedInUserId = $_SESSION['user_id'] ?? null;
+        $app->add(MethodOverrideMiddleware::class);
+        $app->add(TwigMiddleware::createFromContainer($app, Twig::class));
+
+        (require __DIR__ . '/../config/settings.php')($app);
+        (require __DIR__ . '/../config/routes.php')($app);
+
         $twig = $container->get(Twig::class);
-        $twig->getEnvironment()->addGlobal('currentUserId', $loggedInUserId);
+        $guard = $container->get(Guard::class);
+
+        $twig->getEnvironment()->addGlobal('csrf_token_name', $guard->getTokenNameKey());
+        $twig->getEnvironment()->addGlobal('csrf_token_value', $guard->getTokenValueKey());
+        $twig->getEnvironment()->addGlobal('currentUserId', $_SESSION['user_id'] ?? null);
 
         return $app;
     }
