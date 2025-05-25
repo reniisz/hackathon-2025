@@ -12,7 +12,10 @@ class DashboardController extends BaseController
 {
     public function __construct(
         Twig $view,
-        // TODO: add necessary services here and have them injected by the DI container
+        private readonly AuthService $authService,
+        private readonly ExpenseService $expenseService,
+        private readonly MonthlySummaryService $monthlySummaryService,
+        private readonly AlertGenerator $alertGenerator,
     )
     {
         parent::__construct($view);
@@ -20,20 +23,37 @@ class DashboardController extends BaseController
 
     public function index(Request $request, Response $response): Response
     {
-        // TODO: parse the request parameters
-        // TODO: load the currently logged-in user
-        // TODO: get the list of available years for the year-month selector
-        // TODO: call service to generate the overspending alerts for current month
-        // TODO: call service to compute total expenditure per selected year/month
-        // TODO: call service to compute category totals per selected year/month
-        // TODO: call service to compute category averages per selected year/month
+        $userId = $_SESSION['user_id'] ?? null;
+        if (!$userId) {
+            return $response->withHeader('Location', '/login')->withStatus(302);
+        }
+
+        $user = $this->authService->getById($userId);
+
+        $query = $request->getQueryParams();
+        $year = (int)($query['year'] ?? (new \DateTimeImmutable())->format('Y'));
+        $month = (int)($query['month'] ?? (new \DateTimeImmutable())->format('m'));
+
+        $years = $this->expenseService->listExpenditureYears($user);
+
+        $total = $this->monthlySummaryService->computeTotalExpenditure($user, $year, $month);
+        $totals = $this->monthlySummaryService->computePerCategoryTotals($user, $year, $month);
+        $averages = $this->monthlySummaryService->computePerCategoryAverages($user, $year, $month);
+
+        $alerts = [];
+        if ($year === (int)(new \DateTimeImmutable())->format('Y') &&
+            $month === (int)(new \DateTimeImmutable())->format('m')) {
+            $alerts = $this->alertGenerator->generate($totals);
+        }
 
         return $this->render($response, 'dashboard.twig', [
-
-            'alerts'                => [],
-            'totalForMonth'         => [],
-            'totalsForCategories'   => [],
-            'averagesForCategories' => [],
+            'alerts'                => $alerts,
+            'totalForMonth'         => $total,
+            'totalsForCategories'   => $totals,
+            'averagesForCategories' => $averages,
+            'years'                 => $years,
+            'selectedYear'          => $year,
+            'selectedMonth'         => $month,
         ]);
     }
 }
