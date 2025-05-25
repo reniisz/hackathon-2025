@@ -25,12 +25,18 @@ class AlertGenerator
             'month' => $month,
         ];
 
-        $totals = $this->expenses->sumAmountsByCategory($criteria);
+        $totals = $this->expenses->sumAmountsByCategory($criteria); // value is in cents
 
-        foreach ($totals as $category => $amount) {
-            $budget = $this->budgetProvider->getBudgetForCategory($category);
-            if ($budget !== null && $amount > $budget) {
-                $diff = number_format($amount - $budget, 2, '.', ',');
+        //debug
+        //var_dump($totals);
+        //exit;
+
+        foreach ($totals as $category => $data) {
+            $amountInEuros = $data['value'] / 100;
+            $budget = $this->budgetProvider->getBudgetForCategory(strtolower($category));
+
+            if ($budget !== null && $amountInEuros > $budget) {
+                $diff = number_format($amountInEuros - $budget, 2, '.', ',');
                 $alerts[] = "⚠ {$category} budget exceeded by {$diff} €";
             }
         }

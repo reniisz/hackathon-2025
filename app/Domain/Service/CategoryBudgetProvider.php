@@ -11,12 +11,22 @@ class CategoryBudgetProvider
     public function __construct(string $budgetJson)
     {
         $decoded = json_decode($budgetJson, true);
-        $this->budgets = is_array($decoded) ? $decoded : [];
+        if (is_array($decoded)) {
+            // normalize keys to lowercase
+            $this->budgets = [];
+            foreach ($decoded as $key => $value) {
+                $normalizedKey = strtolower(trim($key));
+                $this->budgets[$normalizedKey] = (float) $value;
+            }
+        } else {
+            $this->budgets = [];
+        }
     }
 
     public function getBudgetForCategory(string $category): ?float
     {
-        return $this->budgets[$category] ?? null;
+        $key = strtolower(trim($category));
+        return $this->budgets[$key] ?? null;
     }
 
     public function getAllBudgets(): array

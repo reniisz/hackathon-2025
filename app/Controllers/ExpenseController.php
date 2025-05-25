@@ -137,7 +137,15 @@ class ExpenseController extends BaseController
             return $response->withStatus(403);
         }
 
+        $values = [
+            'date' => $expense->date->format('Y-m-d'),
+            'category' => $expense->category,
+            'amount' => $expense->amountCents / 100,
+            'description' => $expense->description,
+        ];
+
         return $this->render($response, 'expenses/edit.twig', [
+            'values' => $values,
             'expense' => $expense,
             'categories' => $this->getCategories(),
         ]);
@@ -199,8 +207,8 @@ class ExpenseController extends BaseController
 
         $date = new \DateTimeImmutable($data['date']);
 
-        $amountCents = (int) round(((float)$data['amount']) * 100);
-        $this->expenseService->update($expense, $amountCents, trim($data['description']), $date, trim($data['category']));
+        $amount = (float) $data['amount'];
+        $this->expenseService->update($expense, $amount, trim($data['description']), $date, trim($data['category']));
 
         return $response->withHeader('Location', '/expenses')->withStatus(302);
     }

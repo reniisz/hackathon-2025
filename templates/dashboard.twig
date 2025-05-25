@@ -71,9 +71,9 @@
             <h3 class="text-lg font-bold mb-2">Per-category <strong>averages</strong> for month {{ selectedMonth }} of {{ selectedYear }}</h3>
             <div class="space-y-4 mb-2">
                 {% for category, average in averagesForCategories %}
-                    <div class="relative">
+                    <div class="relative overflow-hidden">
                         <div class="bg-{{ colors[loop.index0 % colors|length] }}-600 h-8 rounded"
-                             style="width: {{ average }}%">
+                            style="width: {{ average > 100 ? 100 : average }}%">
                             <span class="absolute inset-0 flex items-center justify-start pl-4 text-white font-bold">
                                 {{ category }}: {{ (average/100) | number_format(2, '.', ',') }} €
                             </span>

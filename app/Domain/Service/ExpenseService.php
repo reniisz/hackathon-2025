@@ -39,12 +39,12 @@ class ExpenseService
 
     public function update(
         Expense $expense,
-        float $amount,
+        float $amountEuros,
         string $description,
         DateTimeImmutable $date,
         string $category,
     ): void {
-        if ($amount <= 0) {
+        if ($amountEuros <= 0) {
             throw new \InvalidArgumentException("Amount must be greater than 0.");
         }
 
@@ -62,7 +62,7 @@ class ExpenseService
         }
 
         // Mutate the expense entity
-        $expense->amountCents = (int)round($amount * 100);
+        $expense->amountCents = (int)round($amountEuros * 100);
         $expense->description = $description;
         $expense->date = $date;
         $expense->category = $category;
