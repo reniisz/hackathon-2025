@@ -116,8 +116,8 @@ class ExpenseController extends BaseController
             ]);
         }
 
-        // creates only if validation passed
-        $this->expenseService->create($user, (float)$amountStr, $description, $date, $category);
+        $amountCents = (int) round(((float)$amountStr) * 100);
+        $this->expenseService->create($user, $amountCents, $description, $date, $category);
 
         return $response->withHeader('Location', '/expenses')->withStatus(302);
     }
@@ -198,7 +198,9 @@ class ExpenseController extends BaseController
         }
 
         $date = new \DateTimeImmutable($data['date']);
-        $this->expenseService->update($expense, (float)$data['amount'], trim($data['description']), $date, trim($data['category']));
+
+        $amountCents = (int) round(((float)$data['amount']) * 100);
+        $this->expenseService->update($expense, $amountCents, trim($data['description']), $date, trim($data['category']));
 
         return $response->withHeader('Location', '/expenses')->withStatus(302);
     }
