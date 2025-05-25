@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
+use App\Domain\Service\AuthService;
+use App\Domain\Service\ExpenseService;
+use App\Domain\Service\MonthlySummaryService;
+use App\Domain\Service\AlertGenerator;
+
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Slim\Views\Twig;
@@ -43,7 +48,7 @@ class DashboardController extends BaseController
         $alerts = [];
         if ($year === (int)(new \DateTimeImmutable())->format('Y') &&
             $month === (int)(new \DateTimeImmutable())->format('m')) {
-            $alerts = $this->alertGenerator->generate($totals);
+            $alerts = $this->alertGenerator->generate($user, $year, $month);
         }
 
         return $this->render($response, 'dashboard.twig', [

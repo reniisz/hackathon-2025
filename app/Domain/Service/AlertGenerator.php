@@ -5,23 +5,36 @@ declare(strict_types=1);
 namespace App\Domain\Service;
 
 use App\Domain\Entity\User;
+use App\Domain\Repository\ExpenseRepositoryInterface;
+use App\Domain\Service\CategoryBudgetProvider;
 
 class AlertGenerator
 {
-    // TODO: refactor the array below and make categories and their budgets configurable in .env
-    // Hint: store them as JSON encoded in .env variable, inject them manually in a dedicated service,
-    // then inject and use use that service wherever you need category/budgets information.
-    private array $categoryBudgets = [
-        'Groceries' => 300.00,
-        'Utilities' => 200.00,
-        'Transport' => 500.00,
-        // ...
-    ];
+    public function __construct(
+        private readonly ExpenseRepositoryInterface $expenses,
+        private readonly CategoryBudgetProvider $budgetProvider,
+    ) {}
 
     public function generate(User $user, int $year, int $month): array
     {
-        // TODO: implement this to generate alerts for overspending by category
+        $alerts = [];
 
-        return [];
+        $criteria = [
+            'user_id' => $user->id,
+            'year' => $year,
+            'month' => $month,
+        ];
+
+        $totals = $this->expenses->sumAmountsByCategory($criteria);
+
+        foreach ($totals as $category => $amount) {
+            $budget = $this->budgetProvider->getBudgetForCategory($category);
+            if ($budget !== null && $amount > $budget) {
+                $diff = number_format($amount - $budget, 2, '.', ',');
+                $alerts[] = "⚠ {$category} budget exceeded by {$diff} €";
+            }
+        }
+
+        return $alerts;
     }
 }
