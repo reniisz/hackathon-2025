@@ -47,7 +47,13 @@ class AuthController extends BaseController
 
         $username = trim($data['username'] ?? '');
         $password = $data['password'] ?? '';
+        $passwordAgain = $data['password_again'] ?? '';
         $errors = [];
+
+        // check password match
+        if ($password !== $passwordAgain) {
+            $errors['password_again'] = 'Passwords do not match.';
+        }
 
         // Validation
         if (strlen($username) < 4) {
