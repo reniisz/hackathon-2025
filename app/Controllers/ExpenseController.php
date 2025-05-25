@@ -49,6 +49,7 @@ class ExpenseController extends BaseController
             'page'          => $page,
             'pageSize'      => $pageSize,
             'totalCount'    => $totalCount,
+            'totalPages'    => (int) ceil($totalCount / $pageSize),
             'selectedYear'  => $year,
             'selectedMonth' => $month,
             'years'         => $years,

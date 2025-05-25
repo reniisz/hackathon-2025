@@ -78,17 +78,37 @@
     </table>
 
     <div class="mt-1 flex justify-center">{{ totalCount }} item(s)</div>
-    <div class="mt-1 flex justify-between">
+    <div class="mt-1 flex justify-between items-center">
+        {# Previous link #}
         {% if page > 1 %}
-            <a href="?page={{ page - 1 }}&year={{ selectedYear }}&month={{ selectedMonth }}" class="text-blue-500 hover:text-blue-400">Previous</a>
+            <a href="?page={{ page - 1 }}&year={{ selectedYear }}&month={{ selectedMonth }}"
+                class="text-blue-500 hover:text-blue-400">Previous</a>
         {% else %}
             <span></span>
         {% endif %}
 
-        {% if page * pageSize < totalCount %}
-            <a href="?page={{ page + 1 }}&year={{ selectedYear }}&month={{ selectedMonth }}" class="text-blue-500 hover:text-blue-400">Next</a>
+        {# Page number links #}
+        <div class="flex gap-2">
+            {% set totalPages = (totalCount / pageSize)|round(0, 'ceil') %}
+            {% for p in 1..totalPages %}
+                {% if p == page %}
+                    <span class="px-3 py-1 rounded bg-blue-700 text-white font-bold">{{ p }}</span>
+                {% else %}
+                    <a href="?page={{ p }}&year={{ selectedYear }}&month={{ selectedMonth }}"
+                        class="px-3 py-1 rounded bg-gray-700 text-blue-300 hover:bg-gray-600">{{ p }}</a>
+                {% endif %}
+            {% endfor %}
+        </div>
+
+        {# Next link #}
+        {% if page < totalPages %}
+            <a href="?page={{ page + 1 }}&year={{ selectedYear }}&month={{ selectedMonth }}"
+                class="text-blue-500 hover:text-blue-400">Next</a>
+        {% else %}
+            <span></span>
         {% endif %}
-    </div>
+</div>
+
 </section>
 
 <section class="mb-8">
