@@ -92,6 +92,12 @@ class ExpenseService
                 $description = trim($description);
                 $category = strtolower(trim($category));
 
+                if (trim($description) === '') {
+                    $this->logger->warning("Skipped row (empty description): $line");
+                    $skipped++;
+                    continue;
+                }
+
                 if (!in_array($category, $knownCategories)) {
                     $this->logger->warning("Skipped row (unknown category): $line");
                     $skipped++;

@@ -41,6 +41,9 @@ class ExpenseController extends BaseController
         $totalCount = $this->expenseService->countByMonth($user->id, $year, $month);
         $years = $this->expenseService->listExpenditureYears($user);
 
+        $flash = $_SESSION['flash'] ?? null;
+        unset($_SESSION['flash']);
+
         return $this->render($response, 'expenses/index.twig', [
             'expenses'      => $expenses,
             'page'          => $page,
@@ -49,6 +52,7 @@ class ExpenseController extends BaseController
             'selectedYear'  => $year,
             'selectedMonth' => $month,
             'years'         => $years,
+            'flash'         => $flash,
         ]);
     }
 
@@ -250,10 +254,12 @@ class ExpenseController extends BaseController
         $uploadedFile = $request->getUploadedFiles()['csv_file'] ?? null;
 
         if ($uploadedFile === null || $uploadedFile->getError() !== UPLOAD_ERR_OK) {
+            $_SESSION['flash'] = '❌ Failed to upload CSV file.';
             return $response->withHeader('Location', '/expenses')->withStatus(302);
         }
 
-        $this->expenseService->importFromCsv($user, $uploadedFile);
+        $importedCount = $this->expenseService->importFromCsv($user, $uploadedFile);
+        $_SESSION['flash'] = "✅ Successfully imported $importedCount expenses.";
 
         return $response->withHeader('Location', '/expenses')->withStatus(302);
     }

@@ -2,6 +2,12 @@
 {% block title %}Expenses{% endblock %}
 
 {% block content %}
+{% if flash %}
+    <div class="bg-green-800 border border-green-600 rounded p-4 mb-4 text-green-100 font-bold text-center">
+        {{ flash }}
+    </div>
+{% endif %}
+
 <h1 class="text-2xl font-bold mb-4">Expenses</h1>
 
 <a href="/expenses/create"
