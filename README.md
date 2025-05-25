@@ -104,10 +104,36 @@ A solution with passing analysis and unit tests will receive extra points.
 ## Delivery details
 
 Participant:
-- Full name: ...
-- Email address: ...
+
+- Full name: Szepesi Renata
+- Email address: reniisz19@gmail.com
 
 Features fully implemented:
-- ...
+
+- Register user via /register (GET + POST)
+- Login via /login (GET + POST)
+- Logout via /logout (GET)
+- Expenses – List via /expenses (GET)
+- Expenses – Add via /expenses/create (GET + POST)
+- Expenses – Edit via /expenses/{id}/edit (GET + POST)
+- Expenses – Delete via /expenses/{id}/delete (POST)
+- Dashboard via / (GET)
+- CSV Import (from /expenses page)
+
+Bonuses :
+
+- Used prepared statements for all database queries.
+- Ensured users can only edit/delete their own expenses.
+- Ensured `composer analyze` passes with PHPMD and PHPStan success.
+- Registered users with secure password hashing using PHP's password_hash.
+- Added "password again" input field in the register form to prevent typos.
+- Made register form CSRF-protected.
+- Verified login using PHP's password_verify.
+- Made login form CSRF-protected.
+- Moved categories and budget thresholds to `.env` configuration.
+- Displayed “1 2 3 .. N” pagination links on the expenses list page.
+- Showed flash messages after deleting expenses (success/failure).
+- Wrapped CSV import in a single DB transaction with rollback on error.
+- Showed flash success message on Expenses List page after CSV import, including imported count.
 
 Other instructions about setting up the application (if any): ...
